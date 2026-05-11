@@ -15,6 +15,7 @@ await auth.init();
 let user = auth.getCurrentUser();
 if (!user || user.role !== 'dm') {
   location.href = '../index.html';
+  return;
 }
 await dataLayer.init();
 

@@ -20,6 +20,7 @@ await auth.init();
 let user = auth.getCurrentUser();
 if (!user || user.role !== 'player') {
   location.href = '../index.html';
+  return;
 }
 $('#myName').textContent = user.name;
 await dataLayer.init();
@@ -31,25 +32,30 @@ let scene = { title: '', desc: '' };
 
 // ── Load All Data (Replaces auto-refresh) ──
 async function loadAll() {
-  const [p, q, m, s] = await Promise.all([
-    dataLayer.list('players'),
-    dataLayer.list('quests'),
-    dataLayer.list('maps'),
-    dataLayer.list('scenes'),
-  ]);
-  players = p;
-  quests = q.filter(x => x.status !== 'secret');
-  maps = m.filter(x => x.visibleToPlayers);
-  const sc = s.find(d => d.id === 'current');
-  if (sc) {
-    scene = sc;
-    $('#sceneTitle').textContent = sc.title || 'Untitled scene';
-    $('#sceneDesc').textContent  = sc.desc  || '';
+  try {
+    const [p, q, m, s] = await Promise.all([
+      dataLayer.list('players'),
+      dataLayer.list('quests'),
+      dataLayer.list('maps'),
+      dataLayer.list('scenes'),
+    ]);
+    players = p;
+    quests = q.filter(x => x.status !== 'secret');
+    maps = m.filter(x => x.visibleToPlayers);
+    const sc = s.find(d => d.id === 'current');
+    if (sc) {
+      scene = sc;
+      $('#sceneTitle').textContent = sc.title || 'Untitled scene';
+      $('#sceneDesc').textContent  = sc.desc  || '';
+    }
+    renderMe();
+    renderParty();
+    renderQuests();
+    renderMaps();
+  } catch (err) {
+    console.error("Data load error:", err);
+    toast('Failed to load data. ' + err.message, 'error');
   }
-  renderMe();
-  renderParty();
-  renderQuests();
-  renderMaps();
 }
 
 await loadAll();

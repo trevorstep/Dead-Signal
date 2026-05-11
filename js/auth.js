@@ -82,13 +82,14 @@ export const auth = {
 
     code = code.toUpperCase();
     
+    // Authenticate FIRST so Firestore rules allow us to read the campaign doc
+    const result = await signInAnonymously(authInstance);
+    const uid = result.user.uid;
+
     const campaignSnap = await getDoc(doc(db, 'campaigns', code));
     if (!campaignSnap.exists()) {
       throw new Error('Campaign not found');
     }
-
-    const result = await signInAnonymously(authInstance);
-    const uid = result.user.uid;
 
     const playersRef = collection(db, 'campaigns', code, 'players');
     const q = query(playersRef, where('name', '==', name));

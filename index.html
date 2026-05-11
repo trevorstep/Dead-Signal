@@ -66,9 +66,16 @@ function render() {
 }
 
 $('#btnDM').addEventListener('click', async () => {
-  await auth.signInDM();
-  toast('Signed in as DM', 'ok');
-  setTimeout(() => location.href = 'pages/dm.html', 400);
+  try {
+    await auth.signInDM();
+    toast('Signed in as DM', 'ok');
+    setTimeout(() => location.href = 'pages/dm.html', 400);
+  } catch (e) {
+    // Ignore if the user just closed the popup manually
+    if (e.code !== 'auth/cancelled-popup-request' && e.code !== 'auth/popup-closed-by-user') {
+      toast(e.message, 'error');
+    }
+  }
 });
 
 $('#btnPlayer').addEventListener('click', () => {

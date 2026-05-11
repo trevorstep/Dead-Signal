@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d0d0d">
+<title>DM Dashboard — Dead Signal</title>
+<link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-logo">DEAD <span class="red">SIGNAL</span></div>
+  <div class="app-tag" id="campaignCode">— DM —</div>
+  <div class="app-actions">
+    <button class="btn btn--icon btn--ghost" id="btnSignOut" title="Sign out">⏻</button>
+  </div>
+</header>
+
+<main class="app-main">
+
+  <!-- STATUS -->
+  <section class="status-bar-inline">
+    <span>PLAYERS: <b id="sbPlayers">0</b></span>
+    <span>AVG HP: <b id="sbHp">—</b></span>
+    <span>ENEMIES: <b id="sbEnemies">0</b></span>
+    <span>QUESTS: <b id="sbQuests">0</b></span>
+  </section>
+
+  <!-- PLAYERS -->
+  <section data-section="players">
+    <div class="section-title">
+      <h2 class="h2">Players <span class="badge badge--blue" id="playerCount" style="margin-left:8px"></span></h2>
+      <button class="btn btn--sm" id="addPlayer">+ Add</button>
+    </div>
+    <div class="player-grid" id="playerGrid"></div>
+    <p class="label" id="emptyPlayers" style="text-align:center;padding:24px 0;display:none">No players yet — tap + Add</p>
+  </section>
+
+  <!-- ENEMIES -->
+  <section data-section="enemies" style="margin-top: 40px;">
+    <div class="section-title">
+      <h2 class="h2">Bad Guys <span class="badge badge--red" id="enemyCount" style="margin-left:8px"></span></h2>
+      <button class="btn btn--sm btn--accent-amber" id="addEnemy">+ Add</button>
+    </div>
+    <div class="enemy-grid" id="enemyGrid"></div>
+    <p class="label" id="emptyEnemies" style="text-align:center;padding:24px 0;display:none">No bad guys yet — tap + Add</p>
+  </section>
+
+  <!-- QUESTS -->
+  <section data-section="quests" style="margin-top: 40px;">
+    <div class="section-title">
+      <h2 class="h2">Quests <span class="badge badge--amber" id="questCount" style="margin-left:8px"></span></h2>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <input class="input" id="questInput" placeholder="Add objective…" style="flex:1;min-width:200px">
+      <select class="select" id="questType" style="width:auto">
+        <option value="active">ACTIVE</option>
+        <option value="secret">SECRET</option>
+        <option value="completed">DONE</option>
+        <option value="failed">FAILED</option>
+      </select>
+      <button class="btn btn--sm" id="addQuest">Add</button>
+    </div>
+    <div class="quest-list" id="questList"></div>
+  </section>
+
+  <!-- MAPS / GALLERY -->
+  <section data-section="maps" style="margin-top: 40px;">
+    <div class="section-title">
+      <h2 class="h2">Maps & Images</h2>
+      <span class="label">Visible to players when toggled on</span>
+    </div>
+    <label class="gallery-upload" id="uploadZone">
+      <input type="file" accept="image/*" multiple style="display:none" id="uploadInput">
+      <span>📁 TAP OR DROP IMAGE HERE</span>
+    </label>
+    <div class="gallery" id="gallery" style="margin-top:12px"></div>
+  </section>
+
+  <!-- DM NOTES -->
+  <section data-section="notes" style="margin-top: 40px;">
+    <div class="section-title">
+      <h2 class="h2">Private Notes</h2>
+      <span class="label">Only you see this</span>
+    </div>
+    <textarea class="textarea" id="dmNotes" rows="6" placeholder="Plot threads, NPC reminders, secrets…"></textarea>
+  </section>
+
+  <!-- CURRENT SCENE -->
+  <section data-section="scene" style="margin-top: 40px;">
+    <div class="section-title">
+      <h2 class="h2">Current Scene</h2>
+      <span class="label">Players see this on their dashboard</span>
+    </div>
+    <input class="input" id="sceneTitle" placeholder="Scene title (e.g., Apartment Complex Parking Lot)" style="margin-bottom:8px">
+    <textarea class="textarea" id="sceneDesc" rows="5" placeholder="What players see and hear right now…"></textarea>
+  </section>
+
+  <!-- DICE -->
+  <section data-section="dice" style="margin-top: 40px;">
+    <div class="section-title">
+      <h2 class="h2">Dice</h2>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+      <span class="label" style="margin:0">STAT MOD</span>
+      <input class="input" id="statMod" type="number" value="0" style="width:80px;text-align:center">
+    </div>
+    <div class="dice-result">
+      <div class="dice-num" id="diceNum" style="color:var(--text)">—</div>
+      <div class="dice-label" id="diceLabel">PICK A DIE</div>
+    </div>
+    <div class="dice-grid">
+      <button class="dice-btn" data-die="4">D4</button>
+      <button class="dice-btn" data-die="6">D6</button>
+      <button class="dice-btn" data-die="8">D8</button>
+      <button class="dice-btn" data-die="10">D10</button>
+      <button class="dice-btn" data-die="12">D12</button>
+      <button class="dice-btn" data-die="20">D20</button>
+      <button class="dice-btn" data-die="100">D100</button>
+      <button class="dice-btn" data-die="2">COIN</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- Mobile tabbar — quick scroll to each section -->
+<nav class="app-tabbar">
+  <button class="tabbar-btn active" data-jump="players"><span class="icon">👥</span>Players</button>
+  <button class="tabbar-btn" data-jump="enemies"><span class="icon">💀</span>Bad Guys</button>
+  <button class="tabbar-btn" data-jump="quests"><span class="icon">📋</span>Quests</button>
+  <button class="tabbar-btn" data-jump="maps"><span class="icon">🗺️</span>Maps</button>
+  <button class="tabbar-btn" data-jump="dice"><span class="icon">🎲</span>Dice</button>
+</nav>
+
+<div class="quota-warning" id="quotaWarning"></div>
+
+<script type="module" src="../js/pages/dm.js"></script>
+</body>
+</html>

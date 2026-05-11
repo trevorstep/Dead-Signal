@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d0d0d">
+<title>Session Summaries — Dead Signal</title>
+<link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-logo">DEAD <span class="red">SIGNAL</span></div>
+  <div class="app-tag">— Recaps —</div>
+  <div class="app-actions">
+    <a href="dm.html" class="btn btn--ghost btn--sm" id="dmLink" style="display:none">DM Dashboard</a>
+    <a href="play.html" class="btn btn--ghost btn--sm" id="playLink" style="display:none">My Character</a>
+  </div>
+</header>
+
+<main class="app-main">
+
+  <section>
+    <div class="section-title">
+      <h2 class="h2">Session Summaries</h2>
+      <button class="btn btn--sm" id="btnNew" style="display:none">+ New Recap</button>
+    </div>
+    <p class="label" style="margin-bottom:24px;line-height:1.6">
+      Catch up on what happened last session. For anyone who was asleep, away, or just needs a refresher.
+    </p>
+
+    <div id="summaryList"></div>
+
+    <p class="label" id="empty" style="text-align:center;padding:48px 0">No summaries yet</p>
+  </section>
+
+</main>
+
+<script type="module">
+import { dataLayer } from '../js/data.js';
+import { auth } from '../js/auth.js';
+import { $, $$, el, toast, debounce } from '../js/ui.js';
+import { makeNewSummary } from '../js/constants.js';
+
+await auth.init();
+const user = auth.getCurrentUser();
+const isDM = user?.role === 'dm';
+if (isDM) {
+  $('#dmLink').style.display = 'inline-flex';
+  $('#btnNew').style.display = 'inline-flex';
+} else if (user?.role === 'player') {
+  $('#playLink').style.display = 'inline-flex';
+}
+
+await dataLayer.init();
+
+let summaries = [];
+dataLayer.subscribe('summaries', docs => {
+  // sort newest first
+  summaries = [...docs].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  render();
+});
+
+function render() {
+  const list = $('#summaryList');
+  $('#empty').style.display = summaries.length ? 'none' : 'block';
+  list.innerHTML = '';
+  summaries.forEach(s => list.appendChild(buildItem(s)));
+}
+
+function buildItem(s) {
+  const card = el('div', { class: 'card', style: 'margin-bottom:16px' });
+  card.innerHTML = `
+    <div class="card-header" style="justify-content:space-between">
+      <div style="flex:1">
+        ${isDM
+          ? `<input class="pcard__name" style="font-size:18px" data-field="title" value="${escapeHtml(s.title || '')}" placeholder="Session title">`
+          : `<div class="h3" style="color:var(--text);font-size:16px">${escapeHtml(s.title || 'Untitled session')}</div>`
+        }
+        <div class="label" style="margin-top:4px">${escapeHtml(s.sessionDate || '')}</div>
+      </div>
+      ${isDM ? `<button class="btn btn--icon btn--ghost btn--accent-red" data-action="delete">×</button>` : ''}
+    </div>
+    <div class="card-section">
+      ${isDM
+        ? `<textarea class="textarea" data-field="body" rows="8" placeholder="What happened. Who did what. Important details. Cliffhangers.">${escapeHtml(s.body || '')}</textarea>`
+        : `<div style="white-space:pre-wrap;line-height:1.7;font-size:14px;color:var(--text-dim)">${escapeHtml(s.body || '(empty)')}</div>`
+      }
+    </div>
+  `;
+
+  if (isDM) {
+    card.querySelector('[data-field="title"]').addEventListener('input', debounce((e) => {
+      dataLayer.update('summaries', s.id, { title: e.target.value });
+    }, 400));
+    card.querySelector('[data-field="body"]').addEventListener('input', debounce((e) => {
+      dataLayer.update('summaries', s.id, { body: e.target.value });
+    }, 500));
+    card.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+      if (!confirm('Delete this summary?')) return;
+      await dataLayer.remove('summaries', s.id);
+      toast('Deleted');
+    });
+  }
+
+  return card;
+}
+
+if (isDM) {
+  $('#btnNew').addEventListener('click', async () => {
+    const id = dataLayer.uid();
+    await dataLayer.set('summaries', id, makeNewSummary('Session ' + (summaries.length + 1)));
+    toast('New summary created', 'ok');
+  });
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d0d0d">
+<title>Dead Signal</title>
+<link rel="stylesheet" href="css/styles.css">
+
+<script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js",
+      "firebase/auth": "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js",
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js",
+      "firebase/storage": "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js"
+    }
+  }
+</script>
+</head>
+<body>
+
+<div class="center-screen">
+  <div class="form-card">
+    <h1>DEAD <span class="red">SIGNAL</span></h1>
+    <p class="subtitle">Field Tracker & Campaign Tools</p>
+
+    <div id="signedOut">
+      <button class="btn btn--primary" id="btnDM">I'm the DM</button>
+      <button class="btn btn--ghost" id="btnPlayer" style="margin-top: 12px;">I'm a Player</button>
+    </div>
+
+    <div id="playerJoin" style="display:none;">
+      <label class="label">Campaign code</label>
+      <input class="input code-input" id="joinCode" maxlength="6" placeholder="------">
+      <label class="label">Your name</label>
+      <input class="input" id="joinName" placeholder="Trevor">
+      <button class="btn btn--primary" id="btnJoin">Join campaign</button>
+      <button class="btn btn--ghost" id="btnBack" style="margin-top: 8px;">Back</button>
+    </div>
+
+    <div id="signedIn" style="display:none;">
+      <p style="font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); margin-bottom: 12px;">
+        Signed in as <b id="userName"></b>
+      </p>
+      <button class="btn btn--primary" id="btnContinue">Continue</button>
+      <button class="btn btn--ghost" id="btnSignOut" style="margin-top: 8px;">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { auth } from './js/auth.js';
+import { toast } from './js/ui.js';
+
+await auth.init();
+
+const $ = sel => document.querySelector(sel);
+
+function render() {
+  const user = auth.getCurrentUser();
+  $('#signedOut').style.display = user ? 'none' : 'block';
+  $('#playerJoin').style.display = 'none';
+  $('#signedIn').style.display = user ? 'block' : 'none';
+  if (user) $('#userName').textContent = user.name + ' (' + user.role + ')';
+}
+
+$('#btnDM').addEventListener('click', async () => {
+  await auth.signInDM();
+  toast('Signed in as DM', 'ok');
+  setTimeout(() => location.href = 'pages/dm.html', 400);
+});
+
+$('#btnPlayer').addEventListener('click', () => {
+  $('#signedOut').style.display = 'none';
+  $('#playerJoin').style.display = 'block';
+});
+
+$('#btnBack').addEventListener('click', render);
+
+$('#btnJoin').addEventListener('click', async () => {
+  const code = $('#joinCode').value.trim().toUpperCase();
+  const name = $('#joinName').value.trim();
+  try {
+    await auth.joinAsPlayer(code, name);
+    toast('Joined ' + code, 'ok');
+    setTimeout(() => location.href = 'pages/play.html', 400);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+});
+
+$('#btnSignOut').addEventListener('click', () => {
+  auth.signOut();
+  render();
+});
+
+$('#btnContinue').addEventListener('click', () => {
+  const user = auth.getCurrentUser();
+  if (user.role === 'dm') location.href = 'pages/dm.html';
+  else location.href = 'pages/play.html';
+});
+
+$('#joinCode').addEventListener('input', (e) => {
+  e.target.value = e.target.value.toUpperCase();
+});
+
+render();
+</script>
+
+</body>
+</html>

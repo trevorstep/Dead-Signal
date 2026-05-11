@@ -99,3 +99,6 @@ Start by reading `js/data.js`, `js/adapters/localStorageAdapter.js`, `js/adapter
 - Mark's localStorage data won't migrate automatically. If he's been using it, his existing campaigns are gone when you flip the adapter. Worth warning him.
 - The DM uid → campaign mapping needs to be reliable. If Mark signs in on a different browser, you'll need a way to either look up his existing campaign or let him "claim" it with the code.
 - The auto-link-by-name in `play.js` is fragile — players need to type their name exactly matching the player doc Mark created. Consider improving this so Mark can drag-and-drop a player onto a joining player.
+
+### Deferred Features
+- **Character Avatars**: Profile picture uploads and displaying character avatars in the DM/Player dashboard have been temporarily removed. We will readdress this feature in the future when we have more time.

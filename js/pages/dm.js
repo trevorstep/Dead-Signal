@@ -76,9 +76,6 @@ function buildPlayerCard(p) {
   const card = el('div', { class: 'pcard', 'data-id': p.id });
   card.innerHTML = `
     <div class="pcard__head">
-      <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: var(--surface); border: 1px solid var(--border-2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 10px;">
-        ${p.avatarUrl ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">` : '?'}
-      </div>
       <input class="pcard__name" placeholder="PLAYER NAME" value="${escapeHtml(p.name || '')}">
       <button class="btn btn--icon btn--ghost btn--accent-red" data-action="delete">×</button>
     </div>

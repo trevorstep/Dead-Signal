@@ -52,34 +52,6 @@ async function loadAll() {
   renderMaps();
 }
 
-// ── Avatar Upload Setup ──
-const profPlaceholder = $('#profileAvatarPlaceholder');
-const profAvatar = $('#profileAvatar');
-const profUpload = $('#profileUpload');
-
-if (profPlaceholder) profPlaceholder.addEventListener('click', () => profUpload.click());
-if (profAvatar) profAvatar.addEventListener('click', () => profUpload.click());
-if (profUpload) profUpload.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    toast('Uploading...', 'ok');
-    const url = await dataLayer.uploadImage(file);
-    const me = players.find(p => p.id === myPlayerId);
-    if (me) {
-      me.avatarUrl = url;
-      await dataLayer.update('players', me.id, { avatarUrl: url });
-      renderMe();
-      renderParty();
-      toast('Avatar updated', 'ok');
-    }
-  } catch (err) {
-    toast(err.message, 'error');
-  } finally {
-    e.target.value = ''; // Reset input so you can retry if it fails
-  }
-});
-
 await loadAll();
 
 // ── Pick or create my player ──
@@ -101,20 +73,6 @@ function renderMe() {
   autoLinkMyPlayer();
   const container = $('#myCard');
   const me = players.find(p => p.id === myPlayerId);
-
-  if (me) {
-    $('#profilePicSection').style.display = 'block';
-    if (me.avatarUrl) {
-      $('#profileAvatar').src = me.avatarUrl;
-      $('#profileAvatar').style.display = 'block';
-      $('#profileAvatarPlaceholder').style.display = 'none';
-    } else {
-      $('#profileAvatar').style.display = 'none';
-      $('#profileAvatarPlaceholder').style.display = 'flex';
-    }
-  } else {
-    if ($('#profilePicSection')) $('#profilePicSection').style.display = 'none';
-  }
 
   if (!me) {
     container.innerHTML = `
@@ -250,10 +208,11 @@ function renderMe() {
   container.appendChild(card);
 }
 
-function pipsHtml(value, color) {
+function pipsHtml(value, color, size = null) {
   let html = '';
+  const style = size ? ` style="width:${size}px;height:${size}px"` : '';
   for (let i = 1; i <= 10; i++) {
-    html += `<div class="pip ${i <= value ? 'pip--' + color : ''}"></div>`;
+    html += `<div class="pip ${i <= value ? 'pip--' + color : ''}"${style}></div>`;
   }
   return html;
 }
@@ -331,15 +290,15 @@ function renderParty() {
     const card = el('div', { class: 'card', style: 'margin-bottom:8px' });
     card.innerHTML = `
       <div class="card-section" style="display:flex;align-items:center;gap:12px;padding:12px 16px">
-        <div style="width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: var(--surface-2); border: 1px solid var(--border-2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 14px; color: var(--muted);">
-          ${p.avatarUrl ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">` : '?'}
-        </div>
         <div style="flex:1">
           <div class="h3" style="color:var(--text);margin-bottom:4px">${escapeHtml(p.name || 'Unnamed')}</div>
           <div class="hp-row" style="gap:8px">
             <div class="hp-num ${hc ? 'hp-num--' + hc : ''}" style="font-size:18px;min-width:36px">${p.hp}</div>
             <div class="hp-bar" style="height:6px"><div class="hp-bar__fill ${hc ? 'hp-bar__fill--' + hc : ''}" style="width:${pct}%"></div></div>
           </div>
+          <div class="label" style="margin-top:12px;margin-bottom:4px;">HUMANITY</div>
+          <div class="pip-row" style="gap:4px;">${pipsHtml(p.hum || 0, 'b', 14)}<span class="pip-count">${p.hum || 0}/10</span></div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:0.1em">${HUMANITY_LABELS[p.hum || 0] || ''}</div>
         </div>
       </div>
       ${p.publicNotes ? `<div class="card-section" style="padding:8px 16px;background:var(--bg)"><p style="font-size:12px;color:var(--text-dim);line-height:1.5">${escapeHtml(p.publicNotes)}</p></div>` : ''}

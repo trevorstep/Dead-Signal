@@ -75,6 +75,8 @@ if (profUpload) profUpload.addEventListener('change', async (e) => {
     }
   } catch (err) {
     toast(err.message, 'error');
+  } finally {
+    e.target.value = ''; // Reset input so you can retry if it fails
   }
 });
 

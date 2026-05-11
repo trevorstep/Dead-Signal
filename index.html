@@ -43,6 +43,12 @@
       <p style="font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); margin-bottom: 12px;">
         Signed in as <b id="userName"></b>
       </p>
+      <div id="dmCampaignSelect" style="display:none; margin-bottom: 16px;">
+        <label class="label">Select Campaign</label>
+        <select class="select" id="campaignDropdown" style="margin-bottom: 8px;"></select>
+        <button class="btn btn--ghost btn--sm" id="btnNewCampaign" style="width: 100%;">+ Create New Campaign</button>
+      </div>
+
       <button class="btn btn--primary" id="btnContinue">Continue</button>
       <button class="btn btn--ghost" id="btnSignOut" style="margin-top: 8px;">Sign out</button>
     </div>
@@ -62,14 +68,30 @@ function render() {
   $('#signedOut').style.display = user ? 'none' : 'block';
   $('#playerJoin').style.display = 'none';
   $('#signedIn').style.display = user ? 'block' : 'none';
-  if (user) $('#userName').textContent = user.name + ' (' + user.role + ')';
+  if (user) {
+    $('#userName').textContent = user.name + ' (' + user.role + ')';
+    if (user.role === 'dm') {
+      $('#dmCampaignSelect').style.display = 'block';
+      const select = $('#campaignDropdown');
+      select.innerHTML = '';
+      (user.campaigns || [user.campaignId]).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = `Campaign: ${c}`;
+        if (c === user.campaignId) opt.selected = true;
+        select.appendChild(opt);
+      });
+    } else if ($('#dmCampaignSelect')) {
+      $('#dmCampaignSelect').style.display = 'none';
+    }
+  }
 }
 
 $('#btnDM').addEventListener('click', async () => {
   try {
     await auth.signInDM();
     toast('Signed in as DM', 'ok');
-    setTimeout(() => location.href = 'pages/dm.html', 400);
+    render();
   } catch (e) {
     // Ignore if the user just closed the popup manually
     if (e.code !== 'auth/cancelled-popup-request' && e.code !== 'auth/popup-closed-by-user') {
@@ -100,6 +122,21 @@ $('#btnJoin').addEventListener('click', async () => {
 $('#btnSignOut').addEventListener('click', () => {
   auth.signOut();
   render();
+});
+
+$('#campaignDropdown')?.addEventListener('change', (e) => {
+  auth.switchCampaign(e.target.value);
+});
+
+$('#btnNewCampaign')?.addEventListener('click', async () => {
+  try {
+    const code = await auth.createNewCampaign();
+    toast('Created new campaign: ' + code, 'ok');
+    auth.switchCampaign(code);
+    render();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
 });
 
 $('#btnContinue').addEventListener('click', () => {

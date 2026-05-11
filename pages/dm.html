@@ -145,6 +145,14 @@
 
 <div class="quota-warning" id="quotaWarning"></div>
 
+<script type="module">
+  import { auth } from '../js/auth.js';
+  const user = auth.getCurrentUser();
+  if (user && user.role === 'dm' && user.campaignId) {
+    document.getElementById('campaignCode').textContent = `— ${user.campaignId} —`;
+  }
+</script>
+
 <script type="module" src="../js/pages/dm.js"></script>
 </body>
 </html>

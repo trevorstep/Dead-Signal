@@ -59,21 +59,55 @@ export const auth = {
     const q = query(campaignsRef, where('ownerUid', '==', uid));
     const snapshot = await getDocs(q);
 
+    let campaigns = [];
+    snapshot.forEach(docSnap => campaigns.push(docSnap.id));
+
     let campaignId;
-    if (snapshot.empty) {
+    if (campaigns.length === 0) {
       campaignId = this.generateCampaignCode();
       await setDoc(doc(db, 'campaigns', campaignId), {
         ownerUid: uid,
         createdAt: serverTimestamp()
       });
+      campaigns.push(campaignId);
     } else {
-      campaignId = snapshot.docs[0].id;
+      const localUser = this.getCurrentUser();
+      if (localUser && localUser.campaignId && campaigns.includes(localUser.campaignId)) {
+        campaignId = localUser.campaignId;
+      } else {
+        campaignId = campaigns[0];
+      }
     }
 
-    const user = { uid, role: 'dm', name: 'DM', campaignId };
+    const user = { uid, role: 'dm', name: 'DM', campaignId, campaigns };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
     emit(user);
     return user;
+  },
+
+  switchCampaign(campaignId) {
+    const user = this.getCurrentUser();
+    if (user && user.role === 'dm') {
+      user.campaignId = campaignId;
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      emit(user);
+      return user;
+    }
+  },
+
+  async createNewCampaign() {
+    const user = this.getCurrentUser();
+    if (!user || user.role !== 'dm') throw new Error('Not DM');
+    const code = this.generateCampaignCode();
+    await setDoc(doc(db, 'campaigns', code), {
+      ownerUid: user.uid,
+      createdAt: serverTimestamp()
+    });
+    user.campaignId = code;
+    user.campaigns = [...(user.campaigns || []), code];
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    emit(user);
+    return code;
   },
 
   async joinAsPlayer(code, name) {

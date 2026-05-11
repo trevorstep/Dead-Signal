@@ -29,18 +29,56 @@ let players = [], quests = [], maps = [];
 let myPlayerId = localStorage.getItem('ds_my_player_id_' + user.uid) || null;
 let scene = { title: '', desc: '' };
 
-// ── Subscribe ──
-dataLayer.subscribe('players', docs => { players = docs; renderMe(); renderParty(); });
-dataLayer.subscribe('quests',  docs => { quests = docs.filter(q => q.status !== 'secret'); renderQuests(); });
-dataLayer.subscribe('maps',    docs => { maps = docs.filter(m => m.visibleToPlayers); renderMaps(); });
-dataLayer.subscribe('scenes',  docs => {
-  const s = docs.find(d => d.id === 'current');
-  if (s) {
-    scene = s;
-    $('#sceneTitle').textContent = s.title || 'Untitled scene';
-    $('#sceneDesc').textContent  = s.desc  || '';
+// ── Load All Data (Replaces auto-refresh) ──
+async function loadAll() {
+  const [p, q, m, s] = await Promise.all([
+    dataLayer.list('players'),
+    dataLayer.list('quests'),
+    dataLayer.list('maps'),
+    dataLayer.list('scenes'),
+  ]);
+  players = p;
+  quests = q.filter(x => x.status !== 'secret');
+  maps = m.filter(x => x.visibleToPlayers);
+  const sc = s.find(d => d.id === 'current');
+  if (sc) {
+    scene = sc;
+    $('#sceneTitle').textContent = sc.title || 'Untitled scene';
+    $('#sceneDesc').textContent  = sc.desc  || '';
+  }
+  renderMe();
+  renderParty();
+  renderQuests();
+  renderMaps();
+}
+
+// ── Avatar Upload Setup ──
+const profPlaceholder = $('#profileAvatarPlaceholder');
+const profAvatar = $('#profileAvatar');
+const profUpload = $('#profileUpload');
+
+if (profPlaceholder) profPlaceholder.addEventListener('click', () => profUpload.click());
+if (profAvatar) profAvatar.addEventListener('click', () => profUpload.click());
+if (profUpload) profUpload.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    toast('Uploading...', 'ok');
+    const url = await dataLayer.uploadImage(file);
+    const me = players.find(p => p.id === myPlayerId);
+    if (me) {
+      me.avatarUrl = url;
+      await dataLayer.update('players', me.id, { avatarUrl: url });
+      renderMe();
+      renderParty();
+      toast('Avatar updated', 'ok');
+    }
+  } catch (err) {
+    toast(err.message, 'error');
   }
 });
+
+await loadAll();
 
 // ── Pick or create my player ──
 function autoLinkMyPlayer() {
@@ -61,6 +99,20 @@ function renderMe() {
   autoLinkMyPlayer();
   const container = $('#myCard');
   const me = players.find(p => p.id === myPlayerId);
+
+  if (me) {
+    $('#profilePicSection').style.display = 'block';
+    if (me.avatarUrl) {
+      $('#profileAvatar').src = me.avatarUrl;
+      $('#profileAvatar').style.display = 'block';
+      $('#profileAvatarPlaceholder').style.display = 'none';
+    } else {
+      $('#profileAvatar').style.display = 'none';
+      $('#profileAvatarPlaceholder').style.display = 'flex';
+    }
+  } else {
+    if ($('#profilePicSection')) $('#profilePicSection').style.display = 'none';
+  }
 
   if (!me) {
     container.innerHTML = `
@@ -127,10 +179,14 @@ function renderMe() {
 
   // HP +/-
   card.querySelector('[data-action="hp-minus"]').addEventListener('click', () => {
-    dataLayer.update('players', me.id, { hp: Math.max(0, me.hp - 1) });
+    me.hp = Math.max(0, me.hp - 1);
+    dataLayer.update('players', me.id, { hp: me.hp });
+    renderMe();
   });
   card.querySelector('[data-action="hp-plus"]').addEventListener('click', () => {
-    dataLayer.update('players', me.id, { hp: Math.min(me.maxHp, me.hp + 1) });
+    me.hp = Math.min(me.maxHp, me.hp + 1);
+    dataLayer.update('players', me.id, { hp: me.hp });
+    renderMe();
   });
 
   // Drag HP
@@ -150,7 +206,10 @@ function renderMe() {
       num.textContent = v;
       num.className = 'hp-num' + (hc ? ' hp-num--' + hc : '');
     },
-    onCommit: () => dataLayer.update('players', me.id, { hp: dragHp }),
+    onCommit: () => {
+      me.hp = dragHp;
+      dataLayer.update('players', me.id, { hp: dragHp });
+    },
   });
 
   // Items add/edit/delete
@@ -159,50 +218,30 @@ function renderMe() {
     row.querySelectorAll('[data-item-field]').forEach(inp => {
       const field = inp.getAttribute('data-item-field');
       inp.addEventListener('input', debounce(() => {
-        const items = [...(me.items || [])];
-        items[idx] = { ...items[idx], [field]: field === 'q' ? (parseInt(inp.value) || 1) : inp.value };
-        dataLayer.update('players', me.id, { items });
+        me.items = [...(me.items || [])];
+        me.items[idx] = { ...me.items[idx], [field]: field === 'q' ? (parseInt(inp.value) || 1) : inp.value };
+        dataLayer.update('players', me.id, { items: me.items });
       }, 300));
     });
     row.querySelector('[data-action="del-item"]').addEventListener('click', () => {
-      const items = (me.items || []).filter((_, i) => i !== idx);
-      dataLayer.update('players', me.id, { items });
+      me.items = (me.items || []).filter((_, i) => i !== idx);
+      dataLayer.update('players', me.id, { items: me.items });
+      renderMe();
     });
   });
   card.querySelector('[data-action="add-item"]').addEventListener('click', () => {
-    const items = [...(me.items || []), { t: '', q: 1 }];
-    dataLayer.update('players', me.id, { items });
+    me.items = [...(me.items || []), { t: '', q: 1 }];
+    dataLayer.update('players', me.id, { items: me.items });
+    renderMe();
   });
 
-  // Primary item images — players can upload their own
-  card.querySelectorAll('[data-primary-slot]').forEach(slotEl => {
-    const idx = parseInt(slotEl.getAttribute('data-primary-slot'));
-    slotEl.addEventListener('click', () => {
-      const inp = document.createElement('input');
-      inp.type = 'file';
-      inp.accept = 'image/*';
-      inp.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        try {
-          const url = await dataLayer.uploadImage(file);
-          const primaries = clonePrimaries(me);
-          primaries[idx].img = url;
-          dataLayer.update('players', me.id, { primaries });
-        } catch (err) {
-          toast(err.message, 'error');
-        }
-      };
-      inp.click();
-    });
-  });
-
+  // Primary items text
   card.querySelectorAll('[data-primary-text]').forEach(txt => {
     const idx = parseInt(txt.getAttribute('data-primary-text'));
     txt.addEventListener('input', debounce((e) => {
-      const primaries = clonePrimaries(me);
-      primaries[idx].t = e.target.value;
-      dataLayer.update('players', me.id, { primaries });
+      me.primaries = clonePrimaries(me);
+      me.primaries[idx].t = e.target.value;
+      dataLayer.update('players', me.id, { primaries: me.primaries });
     }, 300));
   });
 
@@ -247,9 +286,7 @@ function primariesHtml(p) {
     let item = prim[i];
     if (typeof item === 'string') item = { t: item, img: '' };
     if (!item) item = { t: '', img: '' };
-    const hasImg = item.img && item.img.length > 0;
-    html += `<div class="pslot ${hasImg ? 'pslot--has-img' : ''}" data-primary-slot="${i}">
-      ${hasImg ? `<img class="pslot__img" src="${item.img}" alt="">` : ''}
+    html += `<div class="pslot" data-primary-slot="${i}">
       <div class="pslot__tag">PRIMARY ${i+1}</div>
       <textarea class="pslot__input" placeholder="weapon, gear…" data-primary-text="${i}">${escapeHtml(item.t || '')}</textarea>
     </div>`;
@@ -292,6 +329,9 @@ function renderParty() {
     const card = el('div', { class: 'card', style: 'margin-bottom:8px' });
     card.innerHTML = `
       <div class="card-section" style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+        <div style="width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: var(--surface-2); border: 1px solid var(--border-2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 14px; color: var(--muted);">
+          ${p.avatarUrl ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">` : '?'}
+        </div>
         <div style="flex:1">
           <div class="h3" style="color:var(--text);margin-bottom:4px">${escapeHtml(p.name || 'Unnamed')}</div>
           <div class="hp-row" style="gap:8px">
@@ -356,39 +396,12 @@ function renderMaps() {
 // ============================================================
 
 attachPullToRefresh(document.body, async () => {
-  // Re-fetch all collections
-  const [p, q, m, s] = await Promise.all([
-    dataLayer.list('players'),
-    dataLayer.list('quests'),
-    dataLayer.list('maps'),
-    dataLayer.list('scenes'),
-  ]);
-  players = p; quests = q.filter(x => x.status !== 'secret'); maps = m.filter(x => x.visibleToPlayers);
-  const sc = s.find(d => d.id === 'current');
-  if (sc) {
-    scene = sc;
-    $('#sceneTitle').textContent = sc.title || 'Untitled scene';
-    $('#sceneDesc').textContent  = sc.desc  || '';
-  }
-  renderMe(); renderParty(); renderQuests(); renderMaps();
+  await loadAll();
   toast('Refreshed', 'ok');
 });
 
 $('#btnRefresh').addEventListener('click', async () => {
-  const [p, q, m, s] = await Promise.all([
-    dataLayer.list('players'),
-    dataLayer.list('quests'),
-    dataLayer.list('maps'),
-    dataLayer.list('scenes'),
-  ]);
-  players = p; quests = q.filter(x => x.status !== 'secret'); maps = m.filter(x => x.visibleToPlayers);
-  const sc = s.find(d => d.id === 'current');
-  if (sc) {
-    scene = sc;
-    $('#sceneTitle').textContent = sc.title || 'Untitled scene';
-    $('#sceneDesc').textContent  = sc.desc  || '';
-  }
-  renderMe(); renderParty(); renderQuests(); renderMaps();
+  await loadAll();
   toast('Refreshed', 'ok');
 });
 

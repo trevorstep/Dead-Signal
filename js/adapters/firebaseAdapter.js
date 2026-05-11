@@ -32,13 +32,13 @@ import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, dele
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export const firebaseConfig = {
-  // TODO: paste your Firebase config here
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
+  apiKey: "AIzaSyDA3ZhHjDGkNUd6E2XKOVbP-ZZ4IqWFpo8",
+  authDomain: "dead-signal-26336.firebaseapp.com",
+  projectId: "dead-signal-26336",
+  storageBucket: "dead-signal-26336.firebasestorage.app",
+  messagingSenderId: "367546839848",
+  appId: "1:367546839848:web:5a6bbb74572ae8295a561d",
+  measurementId: "G-HRTMZH5DX4"
 };
 
 let db, storage, currentCampaignId = null;

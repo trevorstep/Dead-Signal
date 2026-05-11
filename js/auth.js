@@ -136,8 +136,8 @@ export const auth = {
       await setDoc(doc(db, 'campaigns', code, 'players', playerId), {
         id: playerId,
         name: name,
-        hp: 10,
-        maxHp: 10,
+        hp: 20,
+        maxHp: 20,
         inf: 0,
         hum: 10
       });
